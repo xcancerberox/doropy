@@ -8,9 +8,15 @@ class BaseSensor(object):
     combination with onther sensors values) in order
     to obtain a meteorologic metric.
 
-    The use of this class should be hardware agnostic.    """
+    params:
+        :param interfaces: Dictionary with the avaliable interfaces
+            to use giving a specific hardware (for now a Raspberry Pi)
+        :interfaces type: dict
+    """
 
-    def __init__(self):
+
+    def __init__(self, interfaces):
+        self.interfaces = interfaces
         self.sensor_read = {
             'sensor_id': type(self).__name__.lower(),
             'measurements': []
