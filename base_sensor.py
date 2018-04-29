@@ -87,7 +87,7 @@ class IMU01b(BaseSensor):
         Read the temperature and magnetometer value and return it according with the BaseSensor specifications.
         """
         self.sensor_read['magnetometer'] = (self.get_X(), self.get_Y(), self.get_Z())
-        self.sensor_read['temperature'] = None
+        self.sensor_read['temperature'] = get_temp()
 
         return self.sensor_read
 
