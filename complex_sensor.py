@@ -10,5 +10,4 @@ class ComplexSensor():
         self.sensor_value = dict()
 
     def get_value(self):
-        """Returns a dict with the value measured by the sensor and its unit."""
         return self.sensor_value
