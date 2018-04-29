@@ -1,7 +1,5 @@
 import struct
 
-import smbus
-
 from sensors import BaseSensor
 
 SMBUS_ADDRESS = 1
@@ -44,9 +42,9 @@ class IMU01b(BaseSensor):
 
     """
 
-    def __init__(self, smbus=smbus):
+    def __init__(self, interfaces):
 
-        super().__init__()
+        super().__init__(interfaces)
         self.sensor_read['measurements'] = [
             {
                 'value': None,
@@ -58,20 +56,14 @@ class IMU01b(BaseSensor):
                 'type': 'thermometer',
             }]
 
-
-        self._bus = None
         self.setup()
 
     def setup(self):
         """
-        Initalize the bus for i2C interactions and check
-        if the temperature sensor is on.
+        Check if the temperature sensor is on and enable it if it isn't.
         """
-        self._bus = smbus.SMBus(1)
         if not self.temperature_sensor_is_on():
-            now_it_is = self.enable_temperature_sensor()  # TODO: if it isn't should anyway return the only mangetometer value?
-            if not now_it_is:
-                raise Exception
+            self.enable_temperature_sensor()
 
     def get_value(self):
         """
@@ -83,16 +75,16 @@ class IMU01b(BaseSensor):
 
     def get_X(self):
         """Read the X value from the magnetometer sensor"""
-        low_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, OUT_X_L_M)
-        high_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, OUT_X_H_M)
+        low_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_X_L_M)
+        high_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_X_H_M)
         int_value = struct.unpack('H', bytes([low_byte]) + bytes([high_byte]))[0]
         x_value = two_complement_2_decimal(int_value, 16)
         return x_value
 
     def get_Y(self):
         """Read the Y value from the magnetometer sensor"""
-        low_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, OUT_Y_L_M)
-        high_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, OUT_Y_H_M)
+        low_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Y_L_M)
+        high_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Y_H_M)
         int_value = struct.unpack('H', bytes([low_byte]) + bytes([high_byte]))[0]
         y_value = two_complement_2_decimal(int_value, 16)
         return y_value
@@ -100,16 +92,16 @@ class IMU01b(BaseSensor):
 
     def get_Z(self):
         """Read the Z value from the magnetometer sensor"""
-        low_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, OUT_Z_L_M)
-        high_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, OUT_Z_H_M)
+        low_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Z_L_M)
+        high_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Z_H_M)
         int_value = struct.unpack('H', bytes([low_byte]) + bytes([high_byte]))[0]
         z_value = two_complement_2_decimal(int_value, 16)
         return z_value
 
     def get_temp(self):
         """Read the temperature value from the magnetometer temperature sensor"""
-        low_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, TEMP_OUT_L_M)
-        high_byte = self._bus.read_byte_data(MAG_SUB_ADDRESS, TEMP_OUT_H_M)
+        low_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, TEMP_OUT_L_M)
+        high_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, TEMP_OUT_H_M)
         temp_value = struct.unpack('H', bytes([low_byte]) + bytes([high_byte]))[0]
         return temp_value
 
@@ -118,7 +110,7 @@ class IMU01b(BaseSensor):
         Check if the temperature sensor is ON. Indicated by the higher bit in the
         `MAG_CONF_ADD_0` record.
         """
-        byte_conf = self._bus.read_byte_data(MAG_SUB_ADDRESS, MAG_CONF_ADD_0)
+        byte_conf = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, MAG_CONF_ADD_0)
         temperature_on = (byte_conf & 0b10000000) / 128
         return bool(temperature_on)
 
@@ -128,6 +120,6 @@ class IMU01b(BaseSensor):
 
         returns a bool that indicate if the temperature sensor is ON
         """
-        self._bus.write_byte_data(MAG_SUB_ADDRESS, MAG_CONF_ADD_0, MAG_CONF_TEMP_ENABLED)
+        self.interfaces['i2c'].write(MAG_SUB_ADDRESS, MAG_CONF_ADD_0, MAG_CONF_TEMP_ENABLED)
         return self.temperature_sensor_is_on()
 
