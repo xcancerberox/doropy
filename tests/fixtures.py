@@ -5,7 +5,7 @@ class MockI2C(object):
 
     def __init__(self, address):
         self.address = address
-        self.read_values = []
+        self.read_values = {}
 
     def read(self, *args):
         return self.read_values.pop(0)
