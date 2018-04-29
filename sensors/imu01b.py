@@ -2,6 +2,8 @@ import struct
 
 import smbus
 
+from sensors import BaseSensor
+
 SMBUS_ADDRESS = 1
 MAG_SUB_ADDRESS = 0x1e
 OUT_X_H_M = 0x03
@@ -32,29 +34,6 @@ def two_complement_2_decimal(value, n_bits):
     return 0
 
 
-class BaseSensor(object):
-    """
-    Represent a sensor that return his value.
-    This don't represent a meteorologic metric yet,
-    is just a resource to be used to be parsed (in
-    combination with onther sensors values) in order
-    to obtain a meteorologic metric.
-
-    The use of this class should be hardware agnostic.    """
-
-    def __init__(self):
-
-        self.sensor_read = dict()
-
-    def get_value(self):
-        """
-        This should return a dict where the key are the
-        sensor metric name and his value for each metric
-        that the sensor could sense.
-        """
-        return self.sensor_read
-
-
 class IMU01b(BaseSensor):
     """
     This class represent the IMU01b sensor and handle the interactions with it.
@@ -65,9 +44,21 @@ class IMU01b(BaseSensor):
 
     """
 
-    def __init__(self):
+    def __init__(self, smbus=smbus):
 
         super().__init__()
+        self.sensor_read['measurements'] = [
+            {
+                'value': None,
+                'unit': 'Gauss',
+                'type': 'magnetometer',
+            }, {
+                'value': None,
+                'unit': 'ºC',
+                'type': 'thermometer',
+            }]
+
+
         self._bus = None
         self.setup()
 
@@ -86,9 +77,8 @@ class IMU01b(BaseSensor):
         """
         Read the temperature and magnetometer value and return it according with the BaseSensor specifications.
         """
-        self.sensor_read['magnetometer'] = (self.get_X(), self.get_Y(), self.get_Z())
-        self.sensor_read['temperature'] = get_temp()
-
+        self.sensor_read['measurements'][0]['value'] = (self.get_X(), self.get_Y(), self.get_Z())
+        self.sensor_read['measurements'][1]['value'] = self.get_temp()
         return self.sensor_read
 
     def get_X(self):
