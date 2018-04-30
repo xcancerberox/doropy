@@ -8,6 +8,25 @@ from sensors.imu01b import (MAG_CONF_ADD_0, MAG_CONF_TEMP_ENABLED, OUT_X_H_A,
                             OUT_Z_H_M, OUT_Z_L_A, OUT_Z_L_M, TEMP_OUT_H_M,
                             TEMP_OUT_L_M)
 
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    pass
+
+class GPIOs(object):
+
+    def __init__(self, addresses):
+        self.addresses = addresses
+        GPIO.setmode(GPIO.BOARD)
+        for address in self.addresses:
+            GPIO.setup(address, GPIO.IN)
+
+    def get_value(self, address):
+        if address not in self.addresses:
+            raise KeyError
+        gpio_value = GPIO.input(address)
+        return gpio_value
+
 
 class MockI2C(object):
 
