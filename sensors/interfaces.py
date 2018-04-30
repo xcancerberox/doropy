@@ -27,7 +27,7 @@ class GPIORecord(object):
         self.time = time.time()
 
 
-class GPIOProcess(mp.Process):
+class GPIOProcess(object):
     """
     This class define a GPIO process that keep reading the GPIO port in
     a `SAMPLE_TIME` period and store it in a queue.
@@ -41,14 +41,14 @@ class GPIOProcess(mp.Process):
         self.queue = mp.Queue(Q_SIZE)
         self.last_record = GPIORecord(None)
         self._stop = False
+        self._process = mp.Process(target=self._read_values)
         GPIO.setup(address, GPIO.IN)
 
-    def run(self):
+    def _read_values(self):
         """
-        Start the sample process:
-            * Read the GPIO value giving the address.
-            * If the new value is different than the last value, save it in the queue.
-            * Wait `SAMPLE_TIME` seconds.
+        * Read the GPIO value giving the address.
+        * If the new value is different than the last value, save it in the queue.
+        * Wait `SAMPLE_TIME` seconds.
         """
         while not self._stop:
             new_value = GPIO.input(self.address)
@@ -57,12 +57,15 @@ class GPIOProcess(mp.Process):
                 self.queue.put(new_record)
             time.sleep(SAMPLE_TIME)
 
-    def join(self):
+    def start(self):
+        self._process.run()
+
+    def stop(self):
         """
         Set the `_stop` flag to ``True`` and join the process
         """
         self._stop = True
-        super().join()
+        self._process.join()
 
 
 class GPIOs(object):
@@ -93,8 +96,12 @@ class GPIOs(object):
         """
         for address in self.addresses:
             gpio_process = GPIOProcess(address)
-            gpio_process.run()
+            gpio_process.start()
             self.gpios[address] = gpio_process
+
+    def stop(self):
+        for gpio_process in self.gpios.values():
+            gpio_process.stop()
 
     def get_last_record(self, address):
         """
