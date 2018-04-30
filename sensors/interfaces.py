@@ -2,6 +2,8 @@ import random
 import struct
 import time
 
+import multiprocessing as mp
+
 from sensors.imu01b import (MAG_CONF_ADD_0, MAG_CONF_TEMP_ENABLED, OUT_X_H_A,
                             OUT_X_H_M, OUT_X_L_A, OUT_X_L_M, OUT_Y_H_A,
                             OUT_Y_H_M, OUT_Y_L_A, OUT_Y_L_M, OUT_Z_H_A,
@@ -13,19 +15,106 @@ try:
 except ImportError:
     pass
 
+Q_SIZE = 100
+SAMPLE_TIME = 0
+
+
+class GPIORecord(object):
+    """Dummy container for a GPIO record readed in a specific time"""
+
+    def __init__(self, value):
+        self.value = value
+        self.time = time.time()
+
+
+class GPIOProcess(mp.Process):
+    """
+    This class define a GPIO process that keep reading the GPIO port in
+    a `SAMPLE_TIME` period and store it in a queue.
+
+    params:
+        :param address: The GPIO addres using GPIO.BOARD system.
+    """
+    def __init__(self, address, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.address = address
+        self.queue = mp.Queue(Q_SIZE)
+        self.last_record = GPIORecord(None)
+        self._stop = False
+        GPIO.setup(address, GPIO.IN)
+
+    def run(self):
+        """
+        Start the sample process:
+            * Read the GPIO value giving the address.
+            * If the new value is different than the last value, save it in the queue.
+            * Wait `SAMPLE_TIME` seconds.
+        """
+        while not self._stop:
+            new_value = GPIO.input(self.address)
+            if new_value != self.last_record.value:
+                new_record = GPIORecord(new_value)
+                self.queue.put(new_record)
+            time.sleep(SAMPLE_TIME)
+
+    def join(self):
+        """
+        Set the `_stop` flag to ``True`` and join the process
+        """
+        self._stop = True
+        super().join()
+
+
 class GPIOs(object):
+    """
+    This class handle the GPIOs Processes and serve the methods
+    to access the values.
+
+    params:
+        :param address: List of `GPIO.BOARD` addresses to read.
+
+    """
 
     def __init__(self, addresses):
         self.addresses = addresses
-        GPIO.setmode(GPIO.BOARD)
-        for address in self.addresses:
-            GPIO.setup(address, GPIO.IN)
+        self.gpios = dict()
+        self.setup()
 
-    def get_value(self, address):
-        if address not in self.addresses:
-            raise KeyError
-        gpio_value = GPIO.input(address)
-        return gpio_value
+    def setup(self):
+        """
+        Set the GPIO to use BOARD addresses and run `_init_gpios`
+        """
+        GPIO.setmode(GPIO.BOARD)
+        self._init_gpios()
+
+    def _init_gpios(self):
+        """
+        For each GPIO address Initialize the `GPIOProcess` and save it.
+        """
+        for address in self.addresses:
+            gpio_process = GPIOProcess(address)
+            gpio_process.run()
+            self.gpios[address] = gpio_process
+
+    def get_last_record(self, address):
+        """
+        Get the last record of a gpio with the given address
+        """
+        return self.gpios[address].last_record
+
+    def get_records(self, address, n_records=Q_SIZE):
+        """
+        Get `n_records` of the `GPIOProcess` queue. As default return the max size of the queue.
+        It could return less values in case that ``gpio_process.queue.qsize() < n_records``.
+
+        Return a list of `GPIORecord` instances.
+        """
+        gpio_process = self.gpios[address]
+        records = []
+        for i in range(n_records):
+            if not gpio_process.queue.empty():
+                records.append(gpio_process.queue.get())
+        return records
 
 
 class MockI2C(object):
