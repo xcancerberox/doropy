@@ -1,10 +1,18 @@
-import random
+import numpy as np
 
 class SensorMock:
     
     def __init__(self):
-        
-        self.sensor_value = {'x_value': 0.1, 'y_value': 0.5, 'z_value': 1}
+        x_value = 1.0
+        y_value = 0.0
+        z_value = 1.0
+        self.sensor_read = {'measurements': 
+                             [
+                              {'value': 
+                               (x_value, y_value, z_value)
+                              }
+                             ]
+                            }
 
     def get_value(self):
-        return self.sensor_value
+        return self.sensor_read
