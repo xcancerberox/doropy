@@ -40,3 +40,4 @@ class Tachometer(BaseSensor):
         total_time = records[-1].time - records[0].time
         cylce_time_avg = total_time / cycles
         self.sensor_read['measurements'][0]['value'] = cylce_time_avg
+        return self.sensor_read
