@@ -49,7 +49,11 @@ class IMU01b(BaseSensor):
     """
 
     def __init__(self, interfaces):
+        """
+        Initialize the class with the `interfaces` object that provides the hardward resources.
 
+        Full the sensor details with the measurements of this sensor.
+        """
         super().__init__(interfaces)
         self.sensor_read['measurements'] = [
             {
@@ -89,7 +93,7 @@ class IMU01b(BaseSensor):
         return self.sensor_read
 
     def get_acc_X(self):
-        """Read the X value from the magnetometer sensor"""
+        """Read the X value from the accelerometer sensor"""
         low_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Y_H_A)
         high_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_X_H_A)
         int_value = struct.unpack('H', bytes([low_byte]) + bytes([high_byte]))[0]
@@ -97,7 +101,7 @@ class IMU01b(BaseSensor):
         return x_value
 
     def get_acc_Y(self):
-        """Read the Y value from the magnetometer sensor"""
+        """Read the Y value from the accelerometer sensor"""
         low_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Y_L_A)
         high_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Y_H_A)
         int_value = struct.unpack('H', bytes([low_byte]) + bytes([high_byte]))[0]
@@ -105,7 +109,7 @@ class IMU01b(BaseSensor):
         return y_value
 
     def get_acc_Z(self):
-        """Read the Y value from the magnetometer sensor"""
+        """Read the Y value from the accelerometer sensor"""
         low_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Y_L_A)
         high_byte = self.interfaces['i2c'].read(MAG_SUB_ADDRESS, OUT_Y_H_A)
         int_value = struct.unpack('H', bytes([low_byte]) + bytes([high_byte]))[0]
