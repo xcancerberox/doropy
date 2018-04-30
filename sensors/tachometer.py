@@ -17,24 +17,24 @@ class Tachometer(BaseSensor):
         super().__init__(interfaces)
         self.sensor_read['measurements'] = [{
             'value': None,
-            'unit': 'time in seconds to rotate 360º',
-            'type': 'tachometer'
+            'unit': 'seconds',
+            'type': 'average time per turn'
         }]
         self.encoder_pulses = encoder_pulses
 
     def get_records_list(self):
         """
-        Get the records list of the GPIO.
-        The value is the same that the returned by `GPIOs.get_records()` method.
+        Gets the records list of the GPIO.
+        The value is the same as the one returned by `GPIOs.get_records()` method.
         """
         a_values = self.interfaces['gpios'].get_records(GPIO_A)
         return a_values
 
     def get_value(self):
         """
-        Calculate the time to rotate 360º of the last stamples taken for the GPIOProcess.
+        Calculates the average time per turn from
+        the last stamples taken by the GPIOProcess.
         """
-
         records = self.get_records_list()
         cycles = len(records)
         total_time = records[-1].time - records[0].time
