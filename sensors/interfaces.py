@@ -1,61 +1,132 @@
-import random
-import struct
+from threading import Thread
+from queue import Queue
 import time
+from collections import namedtuple
 
-from sensors.imu01b import (MAG_CONF_ADD_0, OUT_X_H_M, OUT_X_L_M, OUT_Y_H_M,
-                            OUT_Y_L_M, OUT_Z_H_M, OUT_Z_L_M, TEMP_OUT_H_M,
-                            TEMP_OUT_L_M, MAG_CONF_TEMP_ENABLED)
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    from sensors.mocks import MockGPIO
+    GPIO = MockGPIO.instance()
+
+Q_SIZE = 10000
+SAMPLE_TIME = 0
 
 
-class MockI2C(object):
+class GPIORecord1(object):
+    """Dummy container for a GPIO record readed in a specific time"""
 
-    def __init__(self, address):
+    def __init__(self, value):
+        self.value = value
+        self.time = time.time()
+
+GPIORecord = namedtuple('GPIORecord', 'value time')
+
+
+
+class GPIOProcess(Thread):
+    """
+    This class define a GPIO process that keep reading the GPIO port in
+    a `SAMPLE_TIME` period and store it in a queue.
+
+    params:
+        :param address: The GPIO addres using GPIO.BOARD system.
+    """
+    def __init__(self, address, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.address = address
-        self.actual_temp = 2000
-        self.actual_x = 2000
-        self.actual_y = 2000
-        self.actual_z = 2000
+        self.queue = Queue()
+        self.last_record = GPIORecord(None, time.time())
+        GPIO.setup(address, GPIO.IN)
 
-        self.update_values_timeout = time.time()
+    def check_for_new_value(self):
+        """
+        Check if the value in the GPIO is different than the last one.
+        If it is, return a `GPIORecord`
+        """
+        new_value = GPIO.input(self.address)
+        if new_value != self.last_record.value:
+            new_record = GPIORecord(new_value, time.time())
+            self.last_record = new_record
+            return self.last_record
+        return
 
-    def update_values(self):
-        self.actual_temp = self.get_random_value(self.actual_temp)
-        self.actual_x = self.get_random_value(self.actual_x)
-        self.actual_y = self.get_random_value(self.actual_y)
-        self.actual_z = self.get_random_value(self.actual_z)
+    def run(self):
+        """
+        Start the sample process.
+            * Check for new values.
+            * If there is a new value, save it in the queue.
+            * Wait `SAMPLE_TIME` seconds.
+        """
+        while True:
+            new_record = self.check_for_new_value()
+            if new_record:
+                self.queue.put(new_record)
+            time.sleep(SAMPLE_TIME)
 
-    def get_random_value(self, previous):
-        return int(previous + random.random()*2.5 * random.choice([1, -1]))
-
-    def get_answer_from_value(self, value, index):
-        return struct.pack('h', value)[index]
-
-    def write(self, *args):
+    def exit(self):
+        """
+        Set the `_stop` flag to ``True`` and join the process
+        """
         pass
 
-    def read(self, *args):
-        if time.time() > self.update_values_timeout:
-            self.update_values()
-            self.update_values_timeout = time.time() + 1
 
-        if args[1] == TEMP_OUT_H_M:
-            rta = self.get_answer_from_value(self.actual_temp, 0)
-        elif args[1] == TEMP_OUT_L_M:
-            rta = self.get_answer_from_value(self.actual_temp, 1)
-        elif args[1] == OUT_X_H_M:
-            rta = self.get_answer_from_value(self.actual_x, 0)
-        elif args[1] == OUT_X_L_M:
-            rta = self.get_answer_from_value(self.actual_x, 1)
-        elif args[1] == OUT_Y_H_M:
-            rta = self.get_answer_from_value(self.actual_y, 0)
-        elif args[1] == OUT_Y_L_M:
-            rta = self.get_answer_from_value(self.actual_y, 1)
-        elif args[1] == OUT_Z_H_M:
-            rta = self.get_answer_from_value(self.actual_z, 0)
-        elif args[1] == OUT_Z_L_M:
-            rta = self.get_answer_from_value(self.actual_z, 1)
-        elif args[1] == MAG_CONF_ADD_0:
-            return MAG_CONF_TEMP_ENABLED
-        else:
-            rta = None
-        return rta
+class GPIOs(object):
+    """
+    This class handle the GPIOs Processes and serve the methods
+    to access the values.
+
+    params:
+        :param address: List of `GPIO.BOARD` addresses to read.
+
+    """
+
+    def __init__(self, addresses):
+        self.addresses = addresses
+        self.gpios = dict()
+        self.setup()
+
+    def setup(self):
+        """
+        Set the GPIO to use BOARD addresses and run `_init_gpios`
+        """
+        GPIO.setmode(GPIO.BOARD)
+        self._init_gpios()
+
+    def _init_gpios(self):
+        """
+        For each GPIO address Initialize the `GPIOProcess` and save it.
+        """
+        for address in self.addresses:
+            gpio_process = GPIOProcess(address)
+            gpio_process.start()
+            self.gpios[address] = gpio_process
+
+    def stop(self):
+        for gpio_process in self.gpios:
+            gpio_process.join()
+
+    def get_last_record(self, address):
+        """
+        Get the last record of a gpio with the given address
+        """
+        return self.gpios[address].last_record
+
+    def get_records(self, address, n_records=200):
+        """
+        Get `n_records` of the `GPIOProcess` queue. As default return the max size of the queue.
+        It could return less values in case that ``gpio_process.queue.qsize() < n_records``.
+
+        Return a list of `GPIORecord` instances.
+        """
+        gpio_process = self.gpios[address]
+        records = []
+        for i in range(n_records):
+            if not gpio_process.queue.empty():
+                try:
+                    records.append(gpio_process.queue.get())
+                    gpio_process.queue.task_done()
+                except Queue.Empty as e:
+                    print("No hubo datos")
+        return records
+
