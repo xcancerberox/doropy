@@ -10,6 +10,7 @@ from sensors.tachometer import Tachometer
 COMMAND_SEPARATOR = '\n'
 PREFIX_COMPLEX_SENSOR_LIST = 'sensors_list'
 PREFIX_ANEMOMETER = 'anemometer'
+PREFIX_METRIC = 'metric'
 PREFIX_ERROR = 'error'
 
 WIND_VANE_LABEL = 'wind_vane'
@@ -81,9 +82,10 @@ class WeatherStation(object):
 
                 for sensor in self.complex_sensors.values():
                     sensor_values = sensor.get_value()
-                    sensor_msg = '{1}{0}{2}'.format(COMMAND_SEPARATOR,
-                                                    PREFIX_ANEMOMETER,  # TODO: Add this as a wind vane class parametter.
-                                                    json.dumps(sensor_values))
+                    sensor_msg = '{1}{0}{2}{0}{3}'.format(COMMAND_SEPARATOR,
+                                                        PREFIX_METRIC,
+                                                        PREFIX_ANEMOMETER,  # TODO: Add this as a wind vane class parametter.
+                                                        json.dumps(sensor_values))
                     self.publisher_socket.send_string(sensor_msg)
             except Exception as error:
                 error_msg = '{1}{0}{2}'.format(COMMAND_SEPARATOR,
