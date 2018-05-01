@@ -10,12 +10,10 @@ from sensors.imu01b import (MAG_CONF_ADD_0, MAG_CONF_TEMP_ENABLED, OUT_X_H_A,
                             OUT_Z_H_M, OUT_Z_L_A, OUT_Z_L_M, TEMP_OUT_H_M,
                             TEMP_OUT_L_M)
 
-try:
-    import RPi.GPIO as GPIO
-except ImportError:
-    pass
+import RPi.GPIO as GPIO
 
-Q_SIZE = 100
+
+Q_SIZE = 10000
 SAMPLE_TIME = 0
 
 
@@ -52,8 +50,10 @@ class GPIOProcess(mp.Process):
         """
         while not self._stop:
             new_value = GPIO.input(self.address)
+            #print(new_value)
             if new_value != self.last_record.value:
                 new_record = GPIORecord(new_value)
+                self.last_record = new_record
                 self.queue.put(new_record)
             time.sleep(SAMPLE_TIME)
 
@@ -106,7 +106,7 @@ class GPIOs(object):
         """
         return self.gpios[address].last_record
 
-    def get_records(self, address, n_records=Q_SIZE):
+    def get_records(self, address, n_records=200):
         """
         Get `n_records` of the `GPIOProcess` queue. As default return the max size of the queue.
         It could return less values in case that ``gpio_process.queue.qsize() < n_records``.

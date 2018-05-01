@@ -36,8 +36,11 @@ class Tachometer(BaseSensor):
         the last stamples taken by the GPIOProcess.
         """
         records = self.get_records_list()
-        cycles = len(records)
-        total_time = records[-1].time - records[0].time
-        cylce_time_avg = total_time / cycles
-        self.sensor_read['measurements'][0]['value'] = cylce_time_avg
+        if len(records):
+            cycles = len(records) / (self.encoder_pulses * 2)
+            total_time = records[-1].time - records[0].time
+            cycle_time_avg = total_time / cycles
+        else:
+            cycle_time_avg = 0
+        self.sensor_read['measurements'][0]['value'] = cycle_time_avg
         return self.sensor_read

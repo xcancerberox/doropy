@@ -1,4 +1,4 @@
-import numpy as np
+#import numpy as np
 from complex_sensor import ComplexSensor
 
 class AnemometerWithTachometer(ComplexSensor):
@@ -10,10 +10,12 @@ class AnemometerWithTachometer(ComplexSensor):
 
     def get_wind_speed(self):
         rotation_period = self.sensor.get_value()['measurements'][0]['value']
-        rotation_speed = 2*np.pi*(1/rotation_period) 
-        wind_speed_m_s = rotation_speed * self.arm_length_meters
-        wind_speed_km_h = 3.6 * wind_speed_m_s
-        return wind_speed_km_h
+        if rotation_period:
+            rotation_speed = 2*3.1416*(1/rotation_period) 
+            wind_speed_m_s = rotation_speed * self.arm_length_meters
+            wind_speed_km_h = 3.6 * wind_speed_m_s
+            return wind_speed_km_h
+        return
 
     def prepare_output(self):
         prepared_output = {'wind_speed': self.get_wind_speed()}
