@@ -1,15 +1,20 @@
-from wind_vane import WindVaneWithIMU
-from sensor_mock import SensorMock
-import zmq
+# from wind_vane import WindVaneWithIMU
 import json
 
+import zmq
+
+from anemometer import AnemometerWithTachometer
+from sensors.interfaces import GPIOs
+from sensors.tachometer import Tachometer
 
 COMMAND_SEPARATOR = '\n'
 PREFIX_COMPLEX_SENSOR_LIST = 'sensors_list'
-ERROR_PREFIX = 'error'
+PREFIX_ANEMOMETER = 'anemometer'
+PREFIX_ERROR = 'error'
 
 WIND_VANE_LABEL = 'wind_vane'
-IMU_SENSOR = SensorMock()
+GPIO_ADDRESS_TACOMETER = 15
+PALETA_LONG = 0.1
 
 
 class WeatherStation(object):
@@ -27,7 +32,11 @@ class WeatherStation(object):
         self._stop = False
         self.sensors = []
 
+        self.setup()
+
     def setup(self):
+        self.setup_interfaces()
+        self.setup_simple_sensor()
         self.setup_sensors()
         self.setup_sockets()
 
@@ -36,9 +45,19 @@ class WeatherStation(object):
         self.publisher_socket = self.context.socket(zmq.PUB)
         self.publisher_socket.bind("tcp://*:{0}".format(self.publisher_port))
 
+    def setup_interfaces(self):
+        self.interfaces = {
+            'gpios': GPIOs([GPIO_ADDRESS_TACOMETER])
+        }
+
+    def setup_simple_sensor(self):
+        self.sensors = {
+            'Tachometer': Tachometer(self.interfaces)
+        }
+
     def setup_sensors(self):
         self.sensors.append(
-            WindVaneWithIMU(IMU_SENSOR)
+            AnemometerWithTachometer(self.sensors, PALETA_LONG)
         )
 
     def stop(self):
