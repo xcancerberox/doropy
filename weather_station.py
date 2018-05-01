@@ -1,6 +1,6 @@
 # from wind_vane import WindVaneWithIMU
 import json
-
+import time
 import zmq
 
 from anemometer import AnemometerWithTachometer
@@ -15,7 +15,7 @@ PREFIX_ERROR = 'error'
 WIND_VANE_LABEL = 'wind_vane'
 GPIO_ADDRESS_TACOMETER = 15
 PALETA_LONG = 0.1
-
+PUBLISH_TIME = 2
 
 class WeatherStation(object):
     """
@@ -30,9 +30,8 @@ class WeatherStation(object):
         self.publisher_socket = None
 
         self._stop = False
-        self.sensors = []
-
-        self.setup()
+        self.sensors = {}
+        self.complex_sensors = {}
 
     def setup(self):
         self.setup_interfaces()
@@ -51,14 +50,10 @@ class WeatherStation(object):
         }
 
     def setup_simple_sensor(self):
-        self.sensors = {
-            'Tachometer': Tachometer(self.interfaces)
-        }
+        self.sensors['Tachometer'] = Tachometer(self.interfaces)
 
     def setup_sensors(self):
-        self.sensors.append(
-            AnemometerWithTachometer(self.sensors, PALETA_LONG)
-        )
+        self.complex_sensors['anemometer'] = AnemometerWithTachometer(self.sensors, PALETA_LONG)
 
     def stop(self):
         """
@@ -81,17 +76,20 @@ class WeatherStation(object):
             try:
                 sensor_list_msg = '{1}{0}{2}'.format(COMMAND_SEPARATOR,
                                                      PREFIX_COMPLEX_SENSOR_LIST,
-                                                     json.dumps([WIND_VANE_LABEL]))  # TODO: After complex sensor label implementation change this
+                                                     json.dumps([PREFIX_ANEMOMETER]))  # TODO: After complex sensor label implementation change this
                 self.publisher_socket.send_string(sensor_list_msg)
-                for sensor in self.sensors:
-                    sensor_values = tuple(sensor.get_value())  # TODO: After IMU implementation change this
+
+                for sensor in self.complex_sensors.values():
+                    sensor_values = sensor.get_value()
                     sensor_msg = '{1}{0}{2}'.format(COMMAND_SEPARATOR,
-                                                    WIND_VANE_LABEL,  # TODO: Add this as a wind vane class parametter.
+                                                    PREFIX_ANEMOMETER,  # TODO: Add this as a wind vane class parametter.
                                                     json.dumps(sensor_values))
                     self.publisher_socket.send_string(sensor_msg)
             except Exception as error:
                 error_msg = '{1}{0}{2}'.format(COMMAND_SEPARATOR,
-                                               ERROR_PREFIX,
+                                               PREFIX_ERROR,
                                                error)
                 self.publisher_socket.send_string(error_msg)
+            finally:
+                time.sleep(PUBLISH_TIME)
 
