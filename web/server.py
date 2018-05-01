@@ -4,6 +4,7 @@ import threading
 import dash
 import zmq
 import yaml
+import json
 from dash.dependencies import Output, Event
 import dash_core_components as dcc
 import dash_html_components as html
@@ -40,24 +41,25 @@ class ZMQReader(threading.Thread):
 
     def run(self):
         context = zmq.Context()
-        consumer_receiver = context.socket(zmq.PULL)
+        consumer_receiver = context.socket(zmq.SUB)
         consumer_receiver.connect(config["zmq"])
+        consumer_receiver.setsockopt_string(zmq.SUBSCRIBE, 'anemometer')
 
         while True:
             if self.finish:
                 return
             try:
-                message = consumer_receiver.recv_json(flags=zmq.NOBLOCK)
+                message = consumer_receiver.recv_string(flags=zmq.NOBLOCK)
+                prefix, string_data = message.split('\n')
+                json_data = json.loads(string_data)
             except zmq.Again:
-                print("No message yet")
-                time.sleep(0.5)
+                time.sleep(5)
                 continue
-            metric = message.pop("metric")
-            if metric not in data:
-                data[metric] = []
-            data[metric].append(message)
-            if len(data[metric]) > MAX_DATA:
-                data[metric] = data[metric][-MAX_DATA:]
+            if 'wind_speed' not in data:
+                data['wind_speed'] = []
+            data['wind_speed'].append(json_data['wind_speed'])
+            if len(data['wind_speed']) > MAX_DATA:
+                data['wind_speed'] = data['wind_speed'][-MAX_DATA:]
 
 
 # Update the `content` div with the `layout` object.

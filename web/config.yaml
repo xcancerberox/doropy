@@ -1,26 +1,15 @@
-zmq: "tcp://127.0.0.1:5557"
+zmq: "tcp://10.42.0.55:5555"
 rows:
   - class: row
     cols:
-      - class: col-md-4
-        widget_type: Card
-        title: Temperatura
-        metric: temp
-        format: '{0:.1f} ºC'
-        icon: fas fa-thermometer
-      - class: col-md-4
-        widget_type: Card
-        title: Dirección del viento
-        metric: wind
-        icon: fas fa-compass
-      - class: col-md-4
+      - class: col-md-4 col-md-offset-4
         widget_type: Card
         title: Velocidad del viento
-        metric: wind
+        metric: wind_speed
         icon: fas fa-tachometer-alt
   - class: row
     cols:
       - class: col-md-12
         widget_type: Graph
-        title: Temperatura
-        metric: temp
+        title: Velocidad del viento
+        metric: wind_speed
