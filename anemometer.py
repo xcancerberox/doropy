@@ -20,10 +20,8 @@ class AnemometerWithTachometer(ComplexSensor):
 
     def prepare_output(self):
         prepared_output = {
-            'wind_speed': {
-                'value': self.get_wind_speed(),
-                'timestamp': time.time(),
-            }
+            'timestamp': time.time(),
+            'wind_speed': self.get_wind_speed(),
         }
         return prepared_output
 
