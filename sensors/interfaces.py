@@ -1,6 +1,7 @@
 from threading import Thread
 from queue import Queue
 import time
+from collections import namedtuple
 
 try:
     import RPi.GPIO as GPIO
@@ -9,15 +10,18 @@ except ImportError:
     GPIO = MockGPIO.instance()
 
 Q_SIZE = 10000
-SAMPLE_TIME = 1
+SAMPLE_TIME = 0
 
 
-class GPIORecord(object):
+class GPIORecord1(object):
     """Dummy container for a GPIO record readed in a specific time"""
 
     def __init__(self, value):
         self.value = value
         self.time = time.time()
+
+GPIORecord = namedtuple('GPIORecord', 'value time')
+
 
 
 class GPIOProcess(Thread):
@@ -32,7 +36,7 @@ class GPIOProcess(Thread):
         super().__init__(*args, **kwargs)
         self.address = address
         self.queue = Queue()
-        self.last_record = GPIORecord(None)
+        self.last_record = GPIORecord(None, time.time())
         GPIO.setup(address, GPIO.IN)
 
     def check_for_new_value(self):
@@ -42,7 +46,7 @@ class GPIOProcess(Thread):
         """
         new_value = GPIO.input(self.address)
         if new_value != self.last_record.value:
-            new_record = GPIORecord(new_value)
+            new_record = GPIORecord(new_value, time.time())
             self.last_record = new_record
             return self.last_record
         return
@@ -119,7 +123,10 @@ class GPIOs(object):
         records = []
         for i in range(n_records):
             if not gpio_process.queue.empty():
-                records.append(gpio_process.queue.get())
-                gpio_process.queue.task_done()
+                try:
+                    records.append(gpio_process.queue.get())
+                    gpio_process.queue.task_done()
+                except Queue.Empty as e:
+                    print("No hubo datos")
         return records
 
