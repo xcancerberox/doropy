@@ -55,9 +55,9 @@ class GPIOProcess(mp.Process):
         """
         while True:
             new_record = self.check_for_new_value()
-            if new_record.value == -1:
-                break
-            elif new_record:
+            if new_record:
+                if new_record.value == -1:
+                    break
                 self.queue.put(new_record)
             time.sleep(SAMPLE_TIME)
 
