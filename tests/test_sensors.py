@@ -22,17 +22,17 @@ class TestIMU01b(object):
         imu_instance = imu01b.IMU01b(i2c_imu01b)
 
         sensors_types = [sensor['type'] for sensor in imu_instance.sensor_read['measurements']]
-        assert sensors_types == ['magnetometer', 'thermometer']
+        assert sensors_types == ['magnetometer', 'thermometer', 'accelerometer']
 
     @pytest.mark.parametrize("readed_bytes,expected", [
         ([0x50, 0xc3], 15536),
         ([0x20, 0x4e], -20000),
         ([0xed, 0xf3], 3091),
     ])
-    def test_get_x(self, i2c_imu01b, readed_bytes, expected):
+    def test_get_acc_x(self, i2c_imu01b, readed_bytes, expected):
         i2c_imu01b['i2c'].read_values.extend(readed_bytes)
         imu_instance = imu01b.IMU01b(i2c_imu01b)
-        x_value = imu_instance.get_X()
+        x_value = imu_instance.get_acc_X()
         assert x_value == expected
 
     @pytest.mark.parametrize("readed_bytes,expected", [
@@ -40,10 +40,10 @@ class TestIMU01b(object):
         ([0x20, 0x4e], -20000),
         ([0xed, 0xf3], 3091),
     ])
-    def test_get_y(self, i2c_imu01b, readed_bytes, expected):
+    def test_get_acc_y(self, i2c_imu01b, readed_bytes, expected):
         i2c_imu01b['i2c'].read_values.extend(readed_bytes)
         imu_instance = imu01b.IMU01b(i2c_imu01b)
-        y_value = imu_instance.get_Y()
+        y_value = imu_instance.get_acc_Y()
         assert y_value == expected
 
     @pytest.mark.parametrize("readed_bytes,expected", [
@@ -51,10 +51,42 @@ class TestIMU01b(object):
         ([0x20, 0x4e], -20000),
         ([0xed, 0xf3], 3091),
     ])
-    def test_get_z(self, i2c_imu01b, readed_bytes, expected):
+    def test_get_acc_z(self, i2c_imu01b, readed_bytes, expected):
         i2c_imu01b['i2c'].read_values.extend(readed_bytes)
         imu_instance = imu01b.IMU01b(i2c_imu01b)
-        z_value = imu_instance.get_Z()
+        z_value = imu_instance.get_acc_Z()
+        assert z_value == expected
+    @pytest.mark.parametrize("readed_bytes,expected", [
+        ([0x50, 0xc3], 15536),
+        ([0x20, 0x4e], -20000),
+        ([0xed, 0xf3], 3091),
+    ])
+    def test_get_mag_x(self, i2c_imu01b, readed_bytes, expected):
+        i2c_imu01b['i2c'].read_values.extend(readed_bytes)
+        imu_instance = imu01b.IMU01b(i2c_imu01b)
+        x_value = imu_instance.get_mag_X()
+        assert x_value == expected
+
+    @pytest.mark.parametrize("readed_bytes,expected", [
+        ([0x50, 0xc3], 15536),
+        ([0x20, 0x4e], -20000),
+        ([0xed, 0xf3], 3091),
+    ])
+    def test_get_mag_y(self, i2c_imu01b, readed_bytes, expected):
+        i2c_imu01b['i2c'].read_values.extend(readed_bytes)
+        imu_instance = imu01b.IMU01b(i2c_imu01b)
+        y_value = imu_instance.get_mag_Y()
+        assert y_value == expected
+
+    @pytest.mark.parametrize("readed_bytes,expected", [
+        ([0x50, 0xc3], 15536),
+        ([0x20, 0x4e], -20000),
+        ([0xed, 0xf3], 3091),
+    ])
+    def test_get_mag_z(self, i2c_imu01b, readed_bytes, expected):
+        i2c_imu01b['i2c'].read_values.extend(readed_bytes)
+        imu_instance = imu01b.IMU01b(i2c_imu01b)
+        z_value = imu_instance.get_mag_Z()
         assert z_value == expected
 
     @pytest.mark.parametrize("readed_bytes,expected", [

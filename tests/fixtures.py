@@ -1,5 +1,5 @@
 import pytest
-
+from sensors.mocks import MockGPIO
 
 class MockI2C(object):
 
@@ -22,3 +22,10 @@ def i2c_imu01b():
     }
     interfaces['i2c'].read_values = [0x80]
     return interfaces
+
+@pytest.fixture
+def gpio_instance():
+    print("Init gpio_instance")
+    gpio_instance = MockGPIO.instance()
+    gpio_instance.reset_cache()
+    return gpio_instance
