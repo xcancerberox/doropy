@@ -1,4 +1,5 @@
-import multiprocessing as mp
+from threading import Thread
+from queue import Queue
 import time
 
 try:
@@ -19,7 +20,7 @@ class GPIORecord(object):
         self.time = time.time()
 
 
-class GPIOProcess(mp.Process):
+class GPIOProcess(Thread):
     """
     This class define a GPIO process that keep reading the GPIO port in
     a `SAMPLE_TIME` period and store it in a queue.
@@ -30,7 +31,7 @@ class GPIOProcess(mp.Process):
     def __init__(self, address, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.address = address
-        self.queue = mp.Queue()
+        self.queue = Queue()
         self.last_record = GPIORecord(None)
         GPIO.setup(address, GPIO.IN)
 
@@ -65,8 +66,7 @@ class GPIOProcess(mp.Process):
         """
         Set the `_stop` flag to ``True`` and join the process
         """
-        self.queue.cancel_join_thread()
-        self.queue.close()
+        pass
 
 
 class GPIOs(object):
