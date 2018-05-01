@@ -43,23 +43,25 @@ class ZMQReader(threading.Thread):
         context = zmq.Context()
         consumer_receiver = context.socket(zmq.SUB)
         consumer_receiver.connect(config["zmq"])
-        consumer_receiver.setsockopt_string(zmq.SUBSCRIBE, 'anemometer')
+        consumer_receiver.setsockopt_string(zmq.SUBSCRIBE, 'metric')
 
         while True:
             if self.finish:
                 return
             try:
                 message = consumer_receiver.recv_string(flags=zmq.NOBLOCK)
-                prefix, string_data = message.split('\n')
+                _, sensor, string_data = message.split('\n')
                 json_data = json.loads(string_data)
             except zmq.Again:
                 time.sleep(5)
                 continue
-            if 'wind_speed' not in data:
-                data['wind_speed'] = []
-            data['wind_speed'].append(json_data['wind_speed'])
-            if len(data['wind_speed']) > MAX_DATA:
-                data['wind_speed'] = data['wind_speed'][-MAX_DATA:]
+            timestamp = json_data.pop("timestamp")
+            for metric, value in json_data.items():
+                if metric not in data:
+                    data[metric] = []
+                data[metric].append({'value': value, 'timestamp': timestamp})
+                if len(data[metric]) > MAX_DATA:
+                    data[metric] = data[metric][-MAX_DATA:]
 
 
 # Update the `content` div with the `layout` object.
