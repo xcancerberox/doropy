@@ -57,8 +57,6 @@ class GPIOProcess(Thread):
         while True:
             new_record = self.check_for_new_value()
             if new_record:
-                if new_record.value == -1:
-                    break
                 self.queue.put(new_record)
             time.sleep(SAMPLE_TIME)
 
@@ -122,5 +120,6 @@ class GPIOs(object):
         for i in range(n_records):
             if not gpio_process.queue.empty():
                 records.append(gpio_process.queue.get())
+                gpio_process.queue.task_done()
         return records
 
